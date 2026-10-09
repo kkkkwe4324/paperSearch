@@ -26,7 +26,7 @@ python -m paper_downloader search "physics-informed neural network" --pages 3 --
 | 参数 | 默认值 | 说明 |
 |---|---:|---|
 | `query` | 必需 | 搜索关键词 |
-| `--pages` | `3` | 最大页数 |
+| `--pages` | `3` | 最大页数（最多 5 页） |
 | `--page-size` | `10` | 每页结果数 |
 | `--browser` | 关闭 | 使用持久化浏览器，推荐开启 |
 | `--refresh` | 关闭 | 忽略缓存、重新搜索 |
@@ -126,7 +126,7 @@ downloads/download-state.jsonl
 |---|---:|---|
 | `INPUT` | 必需 | DOI 文件 |
 | `--output` | `downloads` | PDF 目录 |
-| `--delay` | `6` | 每篇间隔秒数 |
+| `--delay` | `15` | 每篇最短间隔秒数；默认随机到 30 秒 |
 | `--retry-count` | `3` | 单篇最大重试次数 |
 | `--resume` | 关闭 | 跳过已有有效 PDF |
 

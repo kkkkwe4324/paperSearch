@@ -36,9 +36,9 @@ python -m paper_downloader login
 python -m paper_downloader download papers.txt --output downloads --delay 6 --resume
 ```
 
-`10.1109/` 路由到 IEEE，`10.1145/` 路由到 ACM。默认每篇间隔 6 秒，失败会有限重试；有效 PDF 会在 `--resume` 下跳过。状态写入 `downloads/download-state.jsonl`。
+`10.1109/` 路由到 IEEE，`10.1145/` 路由到 ACM。默认每篇随机间隔 15–30 秒，遇到认证失效或限流会立即停止并保存状态；有效 PDF 会在 `--resume` 下跳过。状态写入 `downloads/download-state.jsonl`。
 
-如果机构会话过期，程序会停止批处理并报告 `auth_required`；重新执行 `login` 后再运行下载命令即可。
+如果机构会话过期或服务限流，程序会停止批处理并报告 `auth_required` 或 `rate_limited`；完成登录或等待后再运行同一命令即可。
 
 请只下载本人通过南科大订阅合法访问的内容，并遵守学校和出版商的使用条款。
 
