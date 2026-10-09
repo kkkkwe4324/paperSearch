@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+.pytest_cache/
+.paper-downloader/
+downloads/
+results/
+dist/
+build/
+release/
+*.pdf
+*.jsonl
+*.csv
+*.part
