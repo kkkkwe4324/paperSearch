@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Callable, Iterable
 
 from .providers import provider_for_doi
+from .session import chrome_command, profile_path
 
 DOI_RE = re.compile(r"10\.\d{4,9}/[^\s<>\"]+", re.IGNORECASE)
 FIELDS = ["title", "authors", "year", "venue", "doi", "abstract", "snippet", "citation_count", "pdf_url", "provider", "source"]
@@ -108,24 +109,10 @@ class SearchBlockedError(RuntimeError):
 
 def scholar_browser_launch_options(data_dir: Path) -> dict:
     return {
-        "user_data_dir": str(data_dir / "scholar-browser"),
+        "user_data_dir": str(profile_path(data_dir)),
         "headless": False,
         "channel": "chrome",
     }
-
-
-def _find_chrome() -> Path:
-    candidates = [
-        Path(r"C:\Program Files\Google\Chrome\Application\chrome.exe"),
-        Path(r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe"),
-    ]
-    local_app_data = Path(__import__("os").environ.get("LOCALAPPDATA", ""))
-    if local_app_data:
-        candidates.append(local_app_data / "Google/Chrome/Application/chrome.exe")
-    for candidate in candidates:
-        if candidate.is_file():
-            return candidate
-    raise SearchBlockedError("未找到本机 Google Chrome，无法启动 CDP 搜索")
 
 
 def ensure_chrome_cdp(data_dir: Path, port: int) -> subprocess.Popen | None:
@@ -135,21 +122,12 @@ def ensure_chrome_cdp(data_dir: Path, port: int) -> subprocess.Popen | None:
     except OSError:
         pass
 
-    profile = data_dir / "scholar-chrome-profile"
-    profile.mkdir(parents=True, exist_ok=True)
-    process = subprocess.Popen(
-        [
-            str(_find_chrome()),
-            f"--remote-debugging-port={port}",
-            "--remote-allow-origins=*",
-            f"--user-data-dir={profile}",
-            "--no-first-run",
-            "--no-default-browser-check",
-            "about:blank",
-        ],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-    )
+    profile_path(data_dir).mkdir(parents=True, exist_ok=True)
+    try:
+        command = chrome_command(data_dir, port)
+    except FileNotFoundError as exc:
+        raise SearchBlockedError(str(exc)) from exc
+    process = subprocess.Popen(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     deadline = time.monotonic() + 15
     while time.monotonic() < deadline:
         try:

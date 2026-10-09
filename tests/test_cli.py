@@ -1,4 +1,6 @@
-from paper_downloader.cli import build_parser, console_text, run_search
+import pytest
+
+from paper_downloader.cli import build_parser, console_text, main, run_login, run_search
 from paper_downloader.search import PaperResult, SearchBlockedError
 from pathlib import Path
 
@@ -9,6 +11,72 @@ def test_download_parser_keeps_one_session_options():
     assert args.input == Path("papers.txt")
     assert args.delay == 7
     assert args.resume is True
+
+
+def test_conservative_defaults_limit_scholar_and_download_rate():
+    parser = build_parser()
+    search = parser.parse_args(["search", "microgrid"])
+    download = parser.parse_args(["download", "papers.txt"])
+
+    assert (search.pages, search.min_delay, search.max_delay) == (3, 20.0, 40.0)
+    assert (download.min_delay, download.max_delay, download.retry_count) == (15.0, 30.0, 3)
+
+
+@pytest.mark.parametrize("argv", [
+    ["search", "microgrid", "--pages", "0"],
+    ["search", "microgrid", "--pages", "6"],
+    ["search", "microgrid", "--min-delay", "41"],
+    ["search", "microgrid", "--min-delay", "30", "--max-delay", "20"],
+    ["download", "papers.txt", "--min-delay", "14"],
+    ["download", "papers.txt", "--retry-count", "4"],
+])
+def test_main_rejects_unsafe_rate_settings_before_starting_browser(argv, monkeypatch):
+    monkeypatch.setattr("paper_downloader.cli.run_search", lambda args: (_ for _ in ()).throw(AssertionError("browser started")))
+    monkeypatch.setattr("paper_downloader.cli.run_download", lambda args: (_ for _ in ()).throw(AssertionError("browser started")))
+
+    with pytest.raises(SystemExit) as error:
+        main(argv)
+
+    assert error.value.code == 2
+
+
+def test_login_opens_ieee_and_acm_for_separate_manual_confirmation(monkeypatch, tmp_path):
+    visited = []
+
+    class Page:
+        def goto(self, url, **kwargs):
+            visited.append(url)
+
+    class Context:
+        pages = [Page()]
+
+        def new_page(self):
+            return Page()
+
+    class Browser:
+        contexts = [Context()]
+
+    class Chromium:
+        def connect_over_cdp(self, endpoint):
+            assert endpoint == "http://127.0.0.1:9333"
+            return Browser()
+
+    class Playwright:
+        chromium = Chromium()
+
+    class Manager:
+        def __enter__(self):
+            return Playwright()
+
+        def __exit__(self, *args):
+            return None
+
+    monkeypatch.setattr("paper_downloader.cli.ensure_chrome_cdp", lambda *args: None)
+    monkeypatch.setattr("paper_downloader.cli._require_playwright", lambda: Manager)
+    monkeypatch.setattr("builtins.input", lambda: "")
+
+    assert run_login(tmp_path, cdp_port=9333) == 0
+    assert visited == ["https://ieeexplore.ieee.org", "https://dl.acm.org"]
 
 
 def test_search_parser_accepts_paging_options():

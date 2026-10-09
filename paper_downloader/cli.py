@@ -1,10 +1,12 @@
 import argparse
+import random
 import sys
 from pathlib import Path
 
 from .downloader import download_batch
 from .search import SearchBlockedError, cache_key, ensure_chrome_cdp, fetch_scholar_pages, fetch_scholar_pages_browser, fetch_scholar_pages_cdp, read_cached_results, write_results
 from .session import cdp_endpoint, open_context
+from .policy import validate_range
 
 
 def console_text(value: str) -> str:
@@ -19,12 +21,15 @@ def build_parser() -> argparse.ArgumentParser:
 
     login = sub.add_parser("login", help="Manually authenticate once in a persistent browser")
     login.add_argument("--data-dir", type=Path, default=Path.home() / ".paper-downloader")
+    login.add_argument("--cdp-port", type=int, default=9222)
 
     download = sub.add_parser("download", help="Download authorized IEEE/ACM PDFs")
     download.add_argument("input", type=Path)
     download.add_argument("--output", type=Path, default=Path("downloads"))
     download.add_argument("--data-dir", type=Path, default=Path.home() / ".paper-downloader")
-    download.add_argument("--delay", type=float, default=6.0)
+    download.add_argument("--delay", type=float, help=argparse.SUPPRESS)
+    download.add_argument("--min-delay", type=float, default=15.0)
+    download.add_argument("--max-delay", type=float, default=30.0)
     download.add_argument("--retry-count", type=int, default=3)
     download.add_argument("--resume", action="store_true")
     download.add_argument("--cdp", action="store_true", help="Connect to an already logged-in Chrome")
@@ -34,8 +39,8 @@ def build_parser() -> argparse.ArgumentParser:
     search.add_argument("query")
     search.add_argument("--pages", type=int, default=3)
     search.add_argument("--page-size", type=int, default=10)
-    search.add_argument("--min-delay", type=float, default=8.0)
-    search.add_argument("--max-delay", type=float, default=15.0)
+    search.add_argument("--min-delay", type=float, default=20.0)
+    search.add_argument("--max-delay", type=float, default=40.0)
     search.add_argument("--results-dir", type=Path, default=Path("results"))
     search.add_argument("--data-dir", type=Path, default=Path.home() / ".paper-downloader")
     search.add_argument("--refresh", action="store_true", help="Ignore the local cache")
@@ -53,16 +58,23 @@ def _require_playwright():
     return sync_playwright
 
 
-def run_login(data_dir: Path) -> int:
+def run_login(data_dir: Path, *, cdp_port: int = 9222) -> int:
     sync_playwright = _require_playwright()
     data_dir.mkdir(parents=True, exist_ok=True)
+    ensure_chrome_cdp(data_dir, cdp_port)
     with sync_playwright() as playwright:
-        context = open_context(playwright, data_dir, headless=False)
+        browser = playwright.chromium.connect_over_cdp(cdp_endpoint(cdp_port))
+        if not browser.contexts:
+            raise SystemExit("CDP Chrome has no browser context")
+        context = browser.contexts[0]
         page = context.pages[0] if context.pages else context.new_page()
         page.goto("https://ieeexplore.ieee.org", wait_until="domcontentloaded", timeout=60_000)
-        print("请在打开的浏览器中完成南科大 SSO/CARSI、验证码和 MFA。完成后回到终端按 Enter。")
+        print("请在打开的浏览器中完成 IEEE 南科大 SSO/CARSI、验证码和 MFA。完成后回到终端按 Enter。")
         input()
-        context.close()
+        acm_page = context.new_page()
+        acm_page.goto("https://dl.acm.org", wait_until="domcontentloaded", timeout=60_000)
+        print("请在打开的浏览器中完成 ACM 南科大 SSO/CARSI、验证码和 MFA。完成后回到终端按 Enter。")
+        input()
     return 0
 
 
@@ -83,14 +95,15 @@ def run_download(args) -> int:
             args.input,
             args.output,
             args.output / "download-state.jsonl",
-            delay=args.delay,
+            delay=args.delay if args.delay is not None else args.min_delay,
+            max_delay=args.max_delay,
             retry_count=args.retry_count,
             resume=args.resume,
         )
         if browser is None:
             context.close()
     print("下载结果:", ", ".join(f"{key}={value}" for key, value in counts.items()))
-    return 1 if counts["auth_required"] else 0
+    return 1 if counts["auth_required"] or counts["rate_limited"] else 0
 
 
 def run_search(args) -> int:
@@ -148,9 +161,29 @@ def run_search(args) -> int:
 
 
 def main(argv=None) -> int:
-    args = build_parser().parse_args(argv)
+    parser = build_parser()
+    args = parser.parse_args(argv)
+    try:
+        if not 1 <= getattr(args, "cdp_port", 9222) <= 65535:
+            raise ValueError("CDP port must be between 1 and 65535")
+        if args.command == "search":
+            if not 1 <= args.pages <= 5:
+                raise ValueError("pages must be between 1 and 5")
+            if not (20 <= args.min_delay <= 40 and 20 <= args.max_delay <= 40):
+                raise ValueError("Scholar delays must be between 20 and 40 seconds")
+            validate_range(args.min_delay, args.max_delay, "Scholar delay")
+        elif args.command == "download":
+            if args.delay is not None and args.delay < 15:
+                raise ValueError("download delay must be at least 15 seconds")
+            if not (15 <= args.min_delay <= 30 and 15 <= args.max_delay <= 30):
+                raise ValueError("download delays must be between 15 and 30 seconds")
+            validate_range(args.min_delay, args.max_delay, "download delay")
+            if not 1 <= args.retry_count <= 3:
+                raise ValueError("retry count must be between 1 and 3")
+    except ValueError as exc:
+        parser.error(str(exc))
     if args.command == "login":
-        return run_login(args.data_dir)
+        return run_login(args.data_dir, cdp_port=args.cdp_port)
     if args.command == "search":
         return run_search(args)
     return run_download(args)

@@ -13,6 +13,7 @@ from paper_downloader.search import (
     parse_scholar_html,
     scholar_browser_launch_options,
 )
+from paper_downloader.session import profile_path
 
 
 def test_normalizes_scholar_result_and_routes_doi():
@@ -87,4 +88,4 @@ def test_browser_mode_uses_installed_chrome_channel(tmp_path):
     options = scholar_browser_launch_options(tmp_path)
     assert options["channel"] == "chrome"
     assert options["headless"] is False
-    assert options["user_data_dir"].endswith("scholar-browser")
+    assert options["user_data_dir"] == str(profile_path(tmp_path))
