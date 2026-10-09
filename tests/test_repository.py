@@ -13,13 +13,21 @@ def test_git_ignores_local_artifacts_and_browser_profiles():
     repo_root = Path(__file__).parent.parent
 
     for candidate in (
-        "downloads/paper.pdf",
-        "results/query.csv",
+        ".venv/x",
+        "__pycache__/x.pyc",
+        ".pytest_cache/x",
         ".paper-downloader/browser-profile/Cookies",
         "browser-profile/Cookies",
         "scholar-browser/Cookies",
         "scholar-chrome-profile/Cookies",
+        "downloads/paper.pdf",
+        "results/query.csv",
+        "dist/a.whl",
+        "build/a",
+        "release/a",
         "state.jsonl",
+        "paper.part",
+        "paper.pdf",
     ):
         result = subprocess.run(
             ["git", "check-ignore", "-q", candidate], cwd=repo_root, check=False
