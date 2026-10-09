@@ -2,6 +2,9 @@
 __pycache__/
 .pytest_cache/
 .paper-downloader/
+browser-profile/
+scholar-browser/
+scholar-chrome-profile/
 downloads/
 results/
 dist/
