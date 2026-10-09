@@ -26,8 +26,11 @@ def _assert_authorized(url: str, body: bytes) -> None:
         raise AuthRequiredError("Authentication required")
     if not body.startswith(b"%PDF-"):
         sample = body[:80].decode("utf-8", errors="replace")
-        if any(word in sample.lower() for word in ("login", "sign in", "unauthorized", "access denied")):
+        lowered = sample.lower()
+        if any(word in lowered for word in ("login", "sign in", "unauthorized", "access denied")):
             raise AuthRequiredError("The provider returned an authentication page")
+        if any(word in body[:4096].lower() for word in (b"awswaf", b"gokuprops", b"captcha", b"unusual traffic")):
+            raise RateLimitedError("Provider verification challenge")
         raise ValueError("The provider response is not a PDF")
 
 

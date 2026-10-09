@@ -1,4 +1,4 @@
-from paper_downloader.providers_runtime import download_pdf
+from paper_downloader.providers_runtime import RateLimitedError, _assert_authorized, download_pdf
 
 
 class Response:
@@ -33,3 +33,11 @@ def test_acm_download_uses_browser_navigation_for_pdf(tmp_path):
 
     assert output.read_bytes().startswith(b"%PDF-")
     assert page.urls[-1].endswith("/doi/pdf/10.1145/1.2")
+
+
+def test_provider_waf_challenge_is_rate_limited():
+    try:
+        _assert_authorized("https://ieeexplore.ieee.org/document/1", b"awsWafCookieDomainList gokuProps")
+    except RateLimitedError:
+        return
+    raise AssertionError("WAF challenge must stop as rate limited")

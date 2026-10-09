@@ -103,7 +103,7 @@ def run_download(args) -> int:
         if browser is None:
             context.close()
     print("下载结果:", ", ".join(f"{key}={value}" for key, value in counts.items()))
-    return 1 if counts["auth_required"] or counts["rate_limited"] else 0
+    return 1 if counts["failed"] or counts["auth_required"] or counts["rate_limited"] else 0
 
 
 def run_search(args) -> int:
