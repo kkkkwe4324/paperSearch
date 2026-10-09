@@ -53,7 +53,6 @@ results/<query-hash>.csv
 ```powershell
 & "C:\Program Files\Google\Chrome\Application\chrome.exe" `
   --remote-debugging-port=9222 `
-  --remote-allow-origins=* `
   --user-data-dir="$env:USERPROFILE\.paper-downloader\scholar-chrome-profile" `
   --no-first-run --no-default-browser-check about:blank
 ```

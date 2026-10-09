@@ -14,6 +14,7 @@ from paper_downloader.search import (
     scholar_browser_launch_options,
 )
 from paper_downloader.session import profile_path
+import inspect
 
 
 def test_normalizes_scholar_result_and_routes_doi():
@@ -89,3 +90,9 @@ def test_browser_mode_uses_installed_chrome_channel(tmp_path):
     assert options["channel"] == "chrome"
     assert options["headless"] is False
     assert options["user_data_dir"] == str(profile_path(tmp_path))
+
+
+def test_scholar_function_defaults_are_conservative():
+    parameters = inspect.signature(__import__("paper_downloader.search", fromlist=["fetch_scholar_pages"]).fetch_scholar_pages).parameters
+    assert parameters["min_delay"].default == 20.0
+    assert parameters["max_delay"].default == 40.0

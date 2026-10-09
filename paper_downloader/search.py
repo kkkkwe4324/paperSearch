@@ -139,7 +139,7 @@ def ensure_chrome_cdp(data_dir: Path, port: int) -> subprocess.Popen | None:
     raise SearchBlockedError("Chrome CDP 端口启动超时")
 
 
-def fetch_scholar_pages(query: str, pages: int, page_size: int, *, min_delay: float = 8.0, max_delay: float = 15.0) -> list[list[PaperResult]]:
+def fetch_scholar_pages(query: str, pages: int, page_size: int, *, min_delay: float = 20.0, max_delay: float = 40.0) -> list[list[PaperResult]]:
     from scholarly import scholarly
 
     navigator = getattr(scholarly, "_Scholarly__nav")
@@ -321,6 +321,6 @@ def fetch_scholar_pages_browser(query: str, pages: int, page_size: int, data_dir
                 break
             result.append(items[:page_size])
             if number < pages - 1:
-                time.sleep(random.uniform(8, 15))
+                time.sleep(random.uniform(20, 40))
         context.close()
     return result

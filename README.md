@@ -51,7 +51,7 @@ python -m pip install -r requirements.txt
 python -m paper_downloader search "microgrid energy management" --pages 5
 ```
 
-每页默认 10 条，页间随机等待 8–15 秒。结果会在终端分页显示，并保存到 `results/` 下的 JSONL 和 CSV 文件，包含标题、作者、会议/期刊、年份、摘要片段、引用数和 DOI。重复查询会直接使用本地缓存；需要重新访问时加 `--refresh`。已获取结果会保留在本地，便于按摘要初筛；其中的 IEEE/ACM DOI 可以复制到 `papers.txt` 再交给下载命令。
+每页默认 10 条，页间随机等待 20–40 秒，单次最多 5 页。结果会在终端分页显示，并保存到 `results/` 下的 JSONL 和 CSV 文件，包含标题、作者、会议/期刊、年份、摘要片段、引用数和 DOI。重复查询会直接使用本地缓存；需要重新访问时加 `--refresh`。已获取结果会保留在本地，便于按摘要初筛；其中的 IEEE/ACM DOI 可以复制到 `papers.txt` 再交给下载命令。
 
 Google Scholar 若返回 CAPTCHA、429 或机器人验证，程序会停止本次查询，不使用代理轮换或 CAPTCHA 绕过。Scholar 不保证每条记录都有完整摘要，缺失时会显示结果片段。
 
@@ -60,7 +60,6 @@ Google Scholar 若返回 CAPTCHA、429 或机器人验证，程序会停止本�
 ```powershell
 & "C:\Program Files\Google\Chrome\Application\chrome.exe" `
   --remote-debugging-port=9222 `
-  --remote-allow-origins=* `
   --user-data-dir="$env:USERPROFILE\.paper-downloader\scholar-chrome-profile" `
   --no-first-run --no-default-browser-check about:blank
 ```
