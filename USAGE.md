@@ -63,7 +63,7 @@ results/<query-hash>.csv
 python -m paper_downloader search "PINN power system" --pages 3 --cdp
 ```
 
-`--cdp-port` 默认是 `9222`，端口不同则显式指定，例如 `--cdp-port 9333`。CDP 模式只连接已有 Chrome，不会在搜索结束时关闭它；搜索按页串行执行，页间默认等待 8–15 秒。不要同时运行多个搜索进程，也不要删除 profile。
+`--cdp-port` 默认是 `9222`，端口不同则显式指定，例如 `--cdp-port 9333`。CDP 模式只连接已有 Chrome，不会在搜索结束时关闭它；搜索按页串行执行，页间默认等待 20–40 秒。不要同时运行多个搜索进程，也不要删除 profile。
 
 短关键词容易产生无关结果。例如 `PINN` 可能匹配作者 `Pinn`。推荐使用：
 
@@ -110,7 +110,8 @@ python -m paper_downloader login
 然后批量下载：
 
 ```powershell
-python -m paper_downloader download papers.txt --output downloads --delay 6 --resume
+python -m paper_downloader download papers.txt --output downloads `
+  --cdp --cdp-port 9222 --min-delay 15 --max-delay 30 --resume
 ```
 
 下载器会复用同一个浏览器会话，不需要每篇重新登录。它会逐篇路由、下载、校验 `%PDF-` 文件头，并把成功/失败状态写入：
@@ -125,7 +126,7 @@ downloads/download-state.jsonl
 |---|---:|---|
 | `INPUT` | 必需 | DOI 文件 |
 | `--output` | `downloads` | PDF 目录 |
-| `--delay` | `15` | 每篇最短间隔秒数；默认随机到 30 秒 |
+| `--min-delay` / `--max-delay` | `15` / `30` | 每篇随机间隔范围（秒） |
 | `--retry-count` | `3` | 单篇最大重试次数 |
 | `--resume` | 关闭 | 跳过已有有效 PDF |
 

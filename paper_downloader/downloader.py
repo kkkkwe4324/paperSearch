@@ -1,4 +1,5 @@
 import random
+import re
 import time
 from pathlib import Path
 
@@ -26,7 +27,8 @@ def read_dois(path: Path) -> list[str]:
 
 
 def output_path(output_dir: Path, doi: str) -> Path:
-    return output_dir / (doi.replace("/", "_") + ".pdf")
+    safe = re.sub(r"[^A-Za-z0-9._-]", "_", doi).replace("..", "_")
+    return output_dir / (safe + ".pdf")
 
 
 def should_skip(path: Path, *, resume: bool) -> bool:
