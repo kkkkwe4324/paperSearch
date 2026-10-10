@@ -2,6 +2,8 @@
 
 完整使用方法见 [USAGE.md](USAGE.md)。
 
+给自动化助手的固定操作流程见 [LLM_QUICKSTART.md](LLM_QUICKSTART.md)。
+
 命令行批量下载有权访问的 IEEE Xplore 和 ACM Digital Library PDF。首次手动完成一次南科大 SSO/CARSI 登录，之后复用本地浏览器 profile 下载多篇论文。
 
 ## 安装
