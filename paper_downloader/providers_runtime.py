@@ -54,9 +54,7 @@ def download_pdf(page, doi: str, output_path: Path) -> int:
         page.goto(f"https://dl.acm.org/doi/{doi}", wait_until="domcontentloaded", timeout=60_000)
         target = acm_pdf_url(doi)
 
-    response = page.goto(target, wait_until="commit", timeout=180_000)
-    if response is None:
-        raise ValueError("The provider returned no PDF response")
+    response = page.context.request.get(target, timeout=180_000)
     if response.status in (403, 429):
         raise RateLimitedError("Provider rate limit")
     body = response.body()
