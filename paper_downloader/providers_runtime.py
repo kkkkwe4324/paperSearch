@@ -5,7 +5,7 @@ from .files import is_valid_pdf
 from .providers import acm_pdf_url, doi_url, normalize_doi, provider_for_doi
 
 IEEE_DOCUMENT_RE = re.compile(r"ieeexplore\.ieee\.org/document/(\d+)", re.IGNORECASE)
-AUTH_MARKERS = ("/login", "/signin", "/cas", "/sso", "wayf")
+AUTH_MARKERS = ("/login", "/signin", "/cas", "/sso", "wayf", "denied=")
 
 
 class AuthRequiredError(RuntimeError):

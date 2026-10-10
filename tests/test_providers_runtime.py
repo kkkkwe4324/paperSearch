@@ -1,4 +1,4 @@
-from paper_downloader.providers_runtime import RateLimitedError, _assert_authorized, download_pdf
+from paper_downloader.providers_runtime import AuthRequiredError, RateLimitedError, _assert_authorized, download_pdf
 
 
 class Response:
@@ -41,3 +41,11 @@ def test_provider_waf_challenge_is_rate_limited():
     except RateLimitedError:
         return
     raise AssertionError("WAF challenge must stop as rate limited")
+
+
+def test_provider_denied_redirect_requires_authentication():
+    try:
+        _assert_authorized("https://ieeexplore.ieee.org/document/1/?denied=", b"access restricted")
+    except AuthRequiredError:
+        return
+    raise AssertionError("provider denied redirect must require authentication")
