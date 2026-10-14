@@ -75,6 +75,10 @@ def run_login(data_dir: Path, *, cdp_port: int = 9222) -> int:
         acm_page.goto("https://dl.acm.org", wait_until="domcontentloaded", timeout=60_000)
         print("请在打开的浏览器中完成 ACM 南科大 SSO/CARSI、验证码和 MFA。完成后回到终端按 Enter。")
         input()
+        sciencedirect_page = context.new_page()
+        sciencedirect_page.goto("https://www.sciencedirect.com", wait_until="domcontentloaded", timeout=60_000)
+        print("请在打开的浏览器中完成 ScienceDirect 南科大机构登录、验证码和 MFA。完成后回到终端按 Enter。")
+        input()
     return 0
 
 

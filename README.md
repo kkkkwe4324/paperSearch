@@ -19,7 +19,7 @@ python -m playwright install chromium
 python -m paper_downloader login
 ```
 
-浏览器打开后，手动完成南科大机构认证、验证码和 MFA，回到终端按 Enter。程序不会接收或打印密码。
+浏览器会依次打开 IEEE、ACM 和 ScienceDirect。你在每个页面手动完成南科大机构认证、验证码和 MFA，回到终端按 Enter。程序不会接收或打印密码。
 
 ## 批量下载
 

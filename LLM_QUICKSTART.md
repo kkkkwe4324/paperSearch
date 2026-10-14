@@ -12,7 +12,7 @@ python -m playwright install chromium
 python -m paper_downloader login --cdp-port 9222
 ```
 
-登录命令打开的 Chrome 中，用户手动完成 IEEE/ACM 南科大 SSO、验证码和 MFA。LLM 不得输入密码、验证码或 MFA。
+登录命令打开的 Chrome 中，用户手动完成 IEEE、ACM 和 ScienceDirect 南科大 SSO、验证码和 MFA。LLM 不得输入密码、验证码或 MFA。
 
 ## Scholar 检索
 

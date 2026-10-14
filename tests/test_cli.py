@@ -40,7 +40,7 @@ def test_main_rejects_unsafe_rate_settings_before_starting_browser(argv, monkeyp
     assert error.value.code == 2
 
 
-def test_login_opens_ieee_and_acm_for_separate_manual_confirmation(monkeypatch, tmp_path):
+def test_login_opens_publishers_for_separate_manual_confirmation(monkeypatch, tmp_path):
     visited = []
 
     class Page:
@@ -76,7 +76,7 @@ def test_login_opens_ieee_and_acm_for_separate_manual_confirmation(monkeypatch, 
     monkeypatch.setattr("builtins.input", lambda: "")
 
     assert run_login(tmp_path, cdp_port=9333) == 0
-    assert visited == ["https://ieeexplore.ieee.org", "https://dl.acm.org"]
+    assert visited == ["https://ieeexplore.ieee.org", "https://dl.acm.org", "https://www.sciencedirect.com"]
 
 
 def test_search_parser_accepts_paging_options():

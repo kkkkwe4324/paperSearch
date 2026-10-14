@@ -102,7 +102,7 @@ python -m paper_downloader search "PINN power system" --pages 5 --browser
 python -m paper_downloader login
 ```
 
-在浏览器中手动完成南科大 SSO/CARSI、验证码和 MFA，完成后回到终端按 Enter。profile 默认位置：
+浏览器会依次打开 IEEE、ACM 和 ScienceDirect；在每个页面手动完成南科大 SSO/CARSI、验证码和 MFA，完成后回到终端按 Enter。profile 默认位置：
 
 ```text
 %USERPROFILE%\.paper-downloader\browser-profile
