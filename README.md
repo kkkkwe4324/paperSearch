@@ -4,7 +4,7 @@
 
 给自动化助手的固定操作流程见 [LLM_QUICKSTART.md](LLM_QUICKSTART.md)。
 
-命令行批量下载有权访问的 IEEE Xplore 和 ACM Digital Library PDF。首次手动完成一次南科大 SSO/CARSI 登录，之后复用本地浏览器 profile 下载多篇论文。
+命令行批量下载有权访问的 IEEE Xplore、ACM Digital Library 和 ScienceDirect PDF。首次手动完成一次机构登录，之后复用本地浏览器 profile 下载多篇论文。
 
 ## 安装
 
@@ -30,6 +30,8 @@ python -m paper_downloader login
 10.1109/example.1234567
 # ACM
 10.1145/1234567.1234568
+# ScienceDirect / Elsevier
+10.1016/j.example.2024.123456
 ```
 
 执行：
@@ -39,7 +41,7 @@ python -m paper_downloader download papers.txt --output downloads `
   --cdp --cdp-port 9222 --min-delay 15 --max-delay 30 --resume
 ```
 
-`10.1109/` 路由到 IEEE，`10.1145/` 路由到 ACM。登录后下载也使用同一个 CDP Chrome（加上 `--cdp`），默认每篇随机间隔 15–30 秒，遇到认证失效或限流会立即停止并保存状态；有效 PDF 会在 `--resume` 下跳过。状态写入 `downloads/download-state.jsonl`。
+`10.1109/` 和 `10.23919/` 路由到 IEEE，`10.1145/` 路由到 ACM，`10.1016/` 和 `10.1006/` 路由到 ScienceDirect。登录后下载也使用同一个 CDP Chrome（加上 `--cdp`），默认每篇随机间隔 15–30 秒，遇到认证失效或限流会立即停止并保存状态；有效 PDF 会在 `--resume` 下跳过。状态写入 `downloads/download-state.jsonl`。
 
 如果机构会话过期或服务限流，程序会停止批处理并报告 `auth_required` 或 `rate_limited`；完成登录或等待后再运行同一命令即可。
 

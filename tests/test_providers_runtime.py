@@ -38,6 +38,27 @@ class Page:
         return Response(b"<html>article</html>")
 
 
+class ScienceDirectRequest(Request):
+    def get(self, url, **kwargs):
+        self.urls.append(url)
+        response = Response(b"%PDF-1.7\n" + b"x" * 10000)
+        response.url = url
+        return response
+
+
+class ScienceDirectPage:
+    url = "https://linkinghub.elsevier.com/retrieve/pii/S1234567890123456"
+
+    def __init__(self):
+        self.context = type("Context", (), {"request": ScienceDirectRequest()})()
+
+    def goto(self, url, **kwargs):
+        self.url = "https://linkinghub.elsevier.com/retrieve/pii/S1234567890123456"
+        response = Response(b"<html>article</html>")
+        response.url = self.url
+        return response
+
+
 def test_acm_download_uses_browser_cookies_for_pdf_request(tmp_path):
     page = Page()
     output = tmp_path / "paper.pdf"
@@ -62,3 +83,15 @@ def test_provider_denied_redirect_requires_authentication():
     except AuthRequiredError:
         return
     raise AssertionError("provider denied redirect must require authentication")
+
+
+def test_sciencedirect_download_resolves_pii_and_uses_browser_cookies(tmp_path):
+    page = ScienceDirectPage()
+    output = tmp_path / "paper.pdf"
+
+    download_pdf(page, "10.1016/j.apenergy.2023.121234", output)
+
+    assert output.read_bytes().startswith(b"%PDF-")
+    assert page.context.request.urls == [
+        "https://www.sciencedirect.com/science/article/pii/S1234567890123456/pdf"
+    ]

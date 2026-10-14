@@ -2,7 +2,7 @@
 
 ## 目标
 
-使用同一个本地 Chrome 会话完成 Scholar 检索和 IEEE/ACM 授权下载。只下载用户明确选择、且账号有权访问的论文。
+使用同一个本地 Chrome 会话完成 Scholar 检索和 IEEE/ACM/ScienceDirect 授权下载。只下载用户明确选择、且账号有权访问的论文。
 
 ## 一次性准备
 

@@ -23,7 +23,7 @@ def build_parser() -> argparse.ArgumentParser:
     login.add_argument("--data-dir", type=Path, default=Path.home() / ".paper-downloader")
     login.add_argument("--cdp-port", type=int, default=9222)
 
-    download = sub.add_parser("download", help="Download authorized IEEE/ACM PDFs")
+    download = sub.add_parser("download", help="Download authorized IEEE/ACM/ScienceDirect PDFs")
     download.add_argument("input", type=Path)
     download.add_argument("--output", type=Path, default=Path("downloads"))
     download.add_argument("--data-dir", type=Path, default=Path.home() / ".paper-downloader")

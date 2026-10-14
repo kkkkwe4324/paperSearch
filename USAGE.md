@@ -86,10 +86,11 @@ python -m paper_downloader search "PINN power system" --pages 5 --browser
 
 也支持 `https://doi.org/...` 和 `doi:10...` 形式。空行、注释行和重复 DOI 会被忽略。
 
-当前只支持：
+当前支持：
 
 - `10.1109/...` → IEEE Xplore；
 - `10.1145/...` → ACM Digital Library。
+- `10.1016/...`、`10.1006/...` → ScienceDirect。
 
 其他 DOI 不会被猜测或强行下载。
 
@@ -124,13 +125,13 @@ downloads/download-state.jsonl
 
 | 参数 | 默认值 | 说明 |
 |---|---:|---|
-| `INPUT` | 必需 | DOI 文件 |
+| `INPUT` | 必需 | DOI 文件（IEEE、ACM 或 ScienceDirect） |
 | `--output` | `downloads` | PDF 目录 |
 | `--min-delay` / `--max-delay` | `15` / `30` | 每篇随机间隔范围（秒） |
 | `--retry-count` | `3` | 单篇最大重试次数 |
 | `--resume` | 关闭 | 跳过已有有效 PDF |
 
-如果登录会话失效，程序会记录 `auth_required` 并停止。重新执行 `login` 后，再运行同一下载命令即可。
+如果登录会话失效，程序会记录 `auth_required` 并停止。重新执行 `login` 后，再运行同一下载命令即可。ScienceDirect 会先把 DOI 解析为 PII，再使用同一浏览器会话请求 `/pdf`。
 
 ## 下载后的筛选
 

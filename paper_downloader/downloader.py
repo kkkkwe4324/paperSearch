@@ -44,7 +44,7 @@ def download_batch(page, input_path: Path, output_dir: Path, state_path: Path, *
         if should_skip(target, resume=resume):
             counts["skipped"] += 1
             continue
-        if provider_for_doi(doi) not in {"ieee", "acm"}:
+        if provider_for_doi(doi) not in {"ieee", "acm", "sciencedirect"}:
             append_state(state_path, {"doi": doi, "status": "failed", "error": "Unsupported provider"})
             counts["failed"] += 1
             continue

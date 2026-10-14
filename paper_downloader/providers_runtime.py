@@ -5,6 +5,10 @@ from .files import is_valid_pdf
 from .providers import acm_pdf_url, doi_url, normalize_doi, provider_for_doi
 
 IEEE_DOCUMENT_RE = re.compile(r"ieeexplore\.ieee\.org/document/(\d+)", re.IGNORECASE)
+SCIENCEDIRECT_PII_RE = re.compile(
+    r"(?:sciencedirect\.com/science/article/(?:abs/)?pii|linkinghub\.elsevier\.com/retrieve/pii)/([A-Z0-9]+)",
+    re.IGNORECASE,
+)
 AUTH_MARKERS = ("/login", "/signin", "/cas", "/sso", "wayf", "denied=")
 
 
@@ -37,7 +41,7 @@ def _assert_authorized(url: str, body: bytes) -> None:
 def download_pdf(page, doi: str, output_path: Path) -> int:
     doi = normalize_doi(doi)
     provider = provider_for_doi(doi)
-    if provider not in {"ieee", "acm"}:
+    if provider not in {"ieee", "acm", "sciencedirect"}:
         raise ValueError(f"Unsupported DOI provider: {doi}")
 
     if provider == "ieee":
@@ -50,9 +54,19 @@ def download_pdf(page, doi: str, output_path: Path) -> int:
         if not match:
             raise ValueError(f"Could not resolve IEEE article number for {doi}")
         target = f"https://ieeexplore.ieee.org/stampPDF/getPDF.jsp?arnumber={match.group(1)}"
-    else:
+    elif provider == "acm":
         page.goto(f"https://dl.acm.org/doi/{doi}", wait_until="domcontentloaded", timeout=60_000)
         target = acm_pdf_url(doi)
+    else:
+        response = page.goto(doi_url(doi), wait_until="domcontentloaded", timeout=60_000)
+        if response and response.status >= 400:
+            if response.status in (403, 429):
+                raise RateLimitedError("Provider rate limit")
+            raise ValueError(f"ScienceDirect DOI navigation returned HTTP {response.status}")
+        match = SCIENCEDIRECT_PII_RE.search(page.url)
+        if not match:
+            raise ValueError(f"Could not resolve ScienceDirect PII for {doi}")
+        target = f"https://www.sciencedirect.com/science/article/pii/{match.group(1)}/pdf"
 
     response = page.context.request.get(target, timeout=180_000)
     if response.status in (403, 429):
