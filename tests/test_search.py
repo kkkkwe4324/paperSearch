@@ -1,5 +1,6 @@
 import csv
 import json
+import paper_downloader.search as search_module
 
 from paper_downloader.search import (
     PaperResult,
@@ -83,6 +84,23 @@ def test_parses_browser_scholar_html():
     assert result.year == "2024"
     assert result.snippet == "This is the abstract snippet."
     assert result.citation_count == 12
+
+
+def test_scholar_verification_poll_retries_while_page_is_navigating():
+    class Page:
+        calls = 0
+
+        def content(self):
+            self.calls += 1
+            if self.calls == 1:
+                raise RuntimeError("Page.content: Unable to retrieve content because the page is navigating and changing the content.")
+            return "<html>results</html>"
+
+    page = Page()
+    assert hasattr(search_module, "_content_while_navigating")
+    read_content = search_module._content_while_navigating
+    assert read_content(page) is None
+    assert read_content(page) == "<html>results</html>"
 
 
 def test_browser_mode_uses_installed_chrome_channel(tmp_path):

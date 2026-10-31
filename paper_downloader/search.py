@@ -107,6 +107,15 @@ class SearchBlockedError(RuntimeError):
         self.partial_pages = partial_pages or []
 
 
+def _content_while_navigating(page) -> str | None:
+    try:
+        return page.content()
+    except Exception as exc:
+        if "navigating and changing the content" in str(exc).lower():
+            return None
+        raise
+
+
 def scholar_browser_launch_options(data_dir: Path) -> dict:
     return {
         "user_data_dir": str(profile_path(data_dir)),
@@ -266,7 +275,10 @@ def fetch_scholar_pages_cdp(
                 deadline = time.monotonic() + verification_timeout
                 while time.monotonic() < deadline:
                     time.sleep(4)
-                    items = parse_scholar_html(page.content(), page_size)
+                    html = _content_while_navigating(page)
+                    if html is None:
+                        continue
+                    items = parse_scholar_html(html, page_size)
                     if items:
                         break
                 if not items:
