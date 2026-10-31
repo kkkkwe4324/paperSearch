@@ -43,6 +43,8 @@ python -m paper_downloader download papers.txt --output downloads `
 
 `10.1109/` 和 `10.23919/` 路由到 IEEE，`10.1145/` 路由到 ACM，`10.1016/` 和 `10.1006/` 路由到 ScienceDirect。登录后下载也使用同一个 CDP Chrome（加上 `--cdp`），默认每篇随机间隔 15–30 秒，遇到认证失效或限流会立即停止并保存状态；有效 PDF 会在 `--resume` 下跳过。状态写入 `downloads/download-state.jsonl`。
 
+ScienceDirect 论文会先用 [fulltext-article-downloader](https://github.com/computron/fulltext-article-downloader) 查找合法开放获取 PDF，再通过 OpenAlex 查找机构仓储副本；找不到开放副本时，下载器会在已登录的浏览器中打开文章页提供的签名 PDF 链接，并用 Chrome CDP 捕获 PDF 响应。设置自己的 `UNPAYWALL_EMAIL` 环境变量可启用 Unpaywall。开放副本的来源会记录在状态文件中。HTTP 403 记为 `access_denied`，HTTP 429 才记为 `rate_limited`。
+
 如果机构会话过期或服务限流，程序会停止批处理并报告 `auth_required` 或 `rate_limited`；完成登录或等待后再运行同一命令即可。
 
 请只下载本人通过南科大订阅合法访问的内容，并遵守学校和出版商的使用条款。

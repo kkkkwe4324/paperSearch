@@ -121,6 +121,8 @@ python -m paper_downloader download papers.txt --output downloads `
 downloads/download-state.jsonl
 ```
 
+ScienceDirect 论文会先通过 `fulltext-article-downloader` 查找开放获取副本，再通过 OpenAlex 查找机构仓储副本。可设置自己的 `UNPAYWALL_EMAIL` 来启用 Unpaywall。开放副本找不到时，下载器会在已登录的浏览器中打开文章页提供的签名 PDF 链接，并用 Chrome CDP 捕获 PDF 响应。状态文件会记录成功来源；HTTP 403 记为 `access_denied`，HTTP 429 才记为 `rate_limited`。
+
 常用下载参数：
 
 | 参数 | 默认值 | 说明 |
@@ -131,7 +133,7 @@ downloads/download-state.jsonl
 | `--retry-count` | `3` | 单篇最大重试次数 |
 | `--resume` | 关闭 | 跳过已有有效 PDF |
 
-如果登录会话失效，程序会记录 `auth_required` 并停止。重新执行 `login` 后，再运行同一下载命令即可。ScienceDirect 会先把 DOI 解析为 PII，再使用同一浏览器会话请求 `/pdf`。
+如果登录会话失效，程序会记录 `auth_required` 并停止。重新执行 `login` 后，再运行同一下载命令即可。ScienceDirect 会先把 DOI 解析为 PII，再从文章页读取签名 PDF 链接并通过同一浏览器会话下载。
 
 ## 下载后的筛选
 

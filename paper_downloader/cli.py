@@ -93,7 +93,7 @@ def run_download(args) -> int:
             context = browser.contexts[0]
         else:
             context = open_context(playwright, args.data_dir, headless=False)
-        page = context.pages[0] if context.pages else context.new_page()
+        page = context.new_page()
         counts = download_batch(
             page,
             args.input,
@@ -107,7 +107,7 @@ def run_download(args) -> int:
         if browser is None:
             context.close()
     print("下载结果:", ", ".join(f"{key}={value}" for key, value in counts.items()))
-    return 1 if counts["failed"] or counts["auth_required"] or counts["rate_limited"] else 0
+    return 1 if counts["failed"] or counts["auth_required"] or counts["rate_limited"] or counts["access_denied"] else 0
 
 
 def run_search(args) -> int:
