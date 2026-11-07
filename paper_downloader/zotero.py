@@ -85,7 +85,10 @@ class ZoteroClient:
         items = [entry["data"] for entry in rows if entry["data"].get("itemType") not in ("attachment", "note")]
         matches = [item for item in items if doi and _normalize_doi(item.get("DOI", "")) == _normalize_doi(doi)]
         if not matches and title:
-            matches = [item for item in items if _normalize_title(item.get("title", "")) == _normalize_title(title)]
+            title_matches = [item for item in items if _normalize_title(item.get("title", "")) == _normalize_title(title)]
+            if doi and title_matches:
+                raise ZoteroError("possible title/version match without the verified DOI; review Zotero and retry by title only after confirmation")
+            matches = title_matches
         if len(matches) > 1:
             raise ZoteroError("ambiguous Zotero match; review duplicate items or paper versions")
         return matches[0] if matches else None
@@ -117,8 +120,16 @@ class ZoteroClient:
         }
 
     def apply_plan(self, plan: dict) -> dict:
-        if plan.get("schema") != 1 or not plan.get("reason"):
+        if not isinstance(plan, dict) or type(plan.get("schema")) is not int or plan["schema"] != 1:
             raise ZoteroError("invalid Zotero routing plan")
+        if any(not isinstance(plan.get(key), str) or not plan[key].strip() for key in ("server_id", "item_key", "reason")):
+            raise ZoteroError("invalid Zotero routing plan: missing server ID, item key, or reason")
+        if not re.fullmatch(r"[A-Z0-9]{8}", plan["item_key"]) or type(plan.get("item_version")) is not int:
+            raise ZoteroError("invalid Zotero routing plan: item key or version")
+        if any(not isinstance(plan.get(key), list) or any(not isinstance(value, str) for value in plan[key]) for key in ("existing_collections", "add_collections")):
+            raise ZoteroError("invalid Zotero routing plan: collection lists")
+        if not isinstance(plan.get("collection_paths"), dict) or any(not isinstance(key, str) or not isinstance(value, str) for key, value in plan["collection_paths"].items()):
+            raise ZoteroError("invalid Zotero routing plan: collection paths")
         server_id = self.server_id()
         if server_id != plan.get("server_id"):
             raise ZoteroError("Zotero library changed; make a new plan")

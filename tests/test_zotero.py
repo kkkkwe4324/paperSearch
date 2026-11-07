@@ -55,6 +55,14 @@ def test_match_uses_exact_doi_and_rejects_duplicates():
         client.match_item(doi="10.1145/example.1")
 
 
+def test_doi_mismatch_does_not_silently_fall_back_to_same_title():
+    transport = FakeTransport()
+    transport.item["data"]["DOI"] = "10.1145/different-paper"
+    client = ZoteroClient(transport=transport)
+    with pytest.raises(ZoteroError, match="title/version match"):
+        client.match_item(doi="10.1145/example.1", title="A Paper")
+
+
 def test_plan_adds_parent_and_apply_preserves_existing_membership():
     transport = FakeTransport()
     client = ZoteroClient(transport=transport)
@@ -77,6 +85,14 @@ def test_apply_skips_write_when_item_is_already_in_target_collections():
     result = client.apply_plan(plan)
     assert "CHILD123" in result["collections"]
     assert not any(call[0] in ("POST", "PATCH") for call in transport.calls)
+
+
+def test_malformed_plan_stops_before_contacting_zotero():
+    transport = FakeTransport()
+    client = ZoteroClient(transport=transport)
+    with pytest.raises(ZoteroError, match="invalid Zotero routing plan"):
+        client.apply_plan({"schema": 1, "reason": "x"})
+    assert transport.calls == []
 
 
 @pytest.mark.parametrize("change", ["stale", "denied", "conflict"])
