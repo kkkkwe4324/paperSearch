@@ -6,7 +6,7 @@
 
 给自动化助手的固定操作流程见 [LLM_QUICKSTART.md](LLM_QUICKSTART.md)。
 
-命令行批量下载有权访问的 IEEE Xplore 和 ACM Digital Library PDF。首次手动完成一次南科大 SSO/CARSI 登录，之后复用本地浏览器 profile 下载多篇论文。
+命令行批量下载有权访问的 IEEE Xplore、ACM Digital Library 和 ScienceDirect PDF。首次手动完成一次机构登录，之后复用本地浏览器 profile 下载多篇论文。
 
 ## 安装
 
@@ -21,7 +21,7 @@ python -m playwright install chromium
 python -m paper_downloader login
 ```
 
-浏览器打开后，手动完成南科大机构认证、验证码和 MFA，回到终端按 Enter。程序不会接收或打印密码。
+浏览器会依次打开 IEEE、ACM 和 ScienceDirect。你在每个页面手动完成南科大机构认证、验证码和 MFA，回到终端按 Enter。程序不会接收或打印密码。
 
 ## 批量下载
 
@@ -32,6 +32,8 @@ python -m paper_downloader login
 10.1109/example.1234567
 # ACM
 10.1145/1234567.1234568
+# ScienceDirect / Elsevier
+10.1016/j.example.2024.123456
 ```
 
 执行：
@@ -41,7 +43,9 @@ python -m paper_downloader download papers.txt --output downloads `
   --cdp --cdp-port 9222 --min-delay 15 --max-delay 30 --resume
 ```
 
-`10.1109/` 路由到 IEEE，`10.1145/` 路由到 ACM。登录后下载也使用同一个 CDP Chrome（加上 `--cdp`），默认每篇随机间隔 15–30 秒，遇到认证失效或限流会立即停止并保存状态；有效 PDF 会在 `--resume` 下跳过。状态写入 `downloads/download-state.jsonl`。
+`10.1109/` 和 `10.23919/` 路由到 IEEE，`10.1145/` 路由到 ACM，`10.1016/` 和 `10.1006/` 路由到 ScienceDirect。登录后下载也使用同一个 CDP Chrome（加上 `--cdp`），默认每篇随机间隔 15–30 秒，遇到认证失效或限流会立即停止并保存状态；有效 PDF 会在 `--resume` 下跳过。状态写入 `downloads/download-state.jsonl`。
+
+ScienceDirect 论文会先用 [fulltext-article-downloader](https://github.com/computron/fulltext-article-downloader) 查找合法开放获取 PDF，再通过 OpenAlex 查找机构仓储副本；找不到开放副本时，下载器会在已登录的浏览器中打开文章页提供的签名 PDF 链接，并用 Chrome CDP 捕获 PDF 响应。设置自己的 `UNPAYWALL_EMAIL` 环境变量可启用 Unpaywall。开放副本的来源会记录在状态文件中。HTTP 403 记为 `access_denied`，HTTP 429 才记为 `rate_limited`。
 
 如果机构会话过期或服务限流，程序会停止批处理并报告 `auth_required` 或 `rate_limited`；完成登录或等待后再运行同一命令即可。
 

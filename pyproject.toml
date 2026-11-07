@@ -4,9 +4,9 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "paper-downloader"
-version = "0.1.6"
+version = "0.1.9"
 requires-python = ">=3.11"
-dependencies = ["playwright>=1.40"]
+dependencies = ["playwright>=1.40", "fulltext-article-downloader==0.2.4"]
 
 [project.scripts]
 paper-downloader = "paper_downloader.cli:main"

@@ -4,7 +4,7 @@
 
 ## 目标
 
-使用同一个本地 Chrome 会话完成 Scholar 检索和 IEEE/ACM 授权下载。只下载用户明确选择、且账号有权访问的论文。
+使用同一个本地 Chrome 会话完成 Scholar 检索和 IEEE/ACM/ScienceDirect 授权下载。只下载用户明确选择、且账号有权访问的论文。
 
 ## 一次性准备
 
@@ -14,7 +14,7 @@ python -m playwright install chromium
 python -m paper_downloader login --cdp-port 9222
 ```
 
-登录命令打开的 Chrome 中，用户手动完成 IEEE/ACM 南科大 SSO、验证码和 MFA。LLM 不得输入密码、验证码或 MFA。
+登录命令打开的 Chrome 中，用户手动完成 IEEE、ACM 和 ScienceDirect 南科大 SSO、验证码和 MFA。LLM 不得输入密码、验证码或 MFA。
 
 ## Scholar 检索
 

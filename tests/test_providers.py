@@ -9,6 +9,10 @@ def test_routes_ieee_and_acm_dois():
     assert provider_for_doi("10.1145/1234567.1234568") == "acm"
 
 
+def test_routes_sciencedirect_dois():
+    assert provider_for_doi("10.1016/j.apenergy.2023.121234") == "sciencedirect"
+
+
 def test_normalizes_and_rejects_unknown_dois():
     assert normalize_doi(" DOI: 10.1109/ABC.1 ") == "10.1109/ABC.1"
     assert provider_for_doi("10.1000/example") is None

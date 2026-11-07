@@ -22,6 +22,8 @@ def provider_for_doi(value: str) -> str | None:
         return "ieee"
     if doi.startswith("10.1145/"):
         return "acm"
+    if doi.startswith(("10.1016/", "10.1006/")):
+        return "sciencedirect"
     return None
 
 
@@ -31,3 +33,7 @@ def doi_url(doi: str) -> str:
 
 def acm_pdf_url(doi: str) -> str:
     return f"https://dl.acm.org/doi/pdf/{normalize_doi(doi)}"
+
+
+def sciencedirect_article_url(doi: str) -> str:
+    return doi_url(doi)

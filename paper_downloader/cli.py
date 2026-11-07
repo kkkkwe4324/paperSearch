@@ -50,7 +50,7 @@ def build_parser() -> argparse.ArgumentParser:
     apply = zotero_sub.add_parser("apply", help="Apply a reviewed routing plan")
     apply.add_argument("plan", type=Path)
 
-    download = sub.add_parser("download", help="Download authorized IEEE/ACM PDFs")
+    download = sub.add_parser("download", help="Download authorized IEEE/ACM/ScienceDirect PDFs")
     download.add_argument("input", type=Path)
     download.add_argument("--output", type=Path)
     download.add_argument("--workspace", type=Path)
@@ -163,6 +163,10 @@ def run_login(data_dir: Path, *, cdp_port: int = 9222) -> int:
         acm_page.goto("https://dl.acm.org", wait_until="domcontentloaded", timeout=60_000)
         print("请在打开的浏览器中完成 ACM 南科大 SSO/CARSI、验证码和 MFA。完成后回到终端按 Enter。")
         input()
+        sciencedirect_page = context.new_page()
+        sciencedirect_page.goto("https://www.sciencedirect.com", wait_until="domcontentloaded", timeout=60_000)
+        print("请在打开的浏览器中完成 ScienceDirect 南科大机构登录、验证码和 MFA。完成后回到终端按 Enter。")
+        input()
     return 0
 
 
@@ -178,7 +182,7 @@ def run_download(args) -> int:
             context = browser.contexts[0]
         else:
             context = open_context(playwright, args.data_dir, headless=False)
-        page = context.pages[0] if context.pages else context.new_page()
+        page = context.new_page()
         counts = download_batch(
             page,
             args.input,
@@ -192,7 +196,7 @@ def run_download(args) -> int:
         if browser is None:
             context.close()
     print("下载结果:", ", ".join(f"{key}={value}" for key, value in counts.items()))
-    return 1 if counts["failed"] or counts["auth_required"] or counts["rate_limited"] else 0
+    return 1 if counts["failed"] or counts["auth_required"] or counts["rate_limited"] or counts["access_denied"] else 0
 
 
 def run_search(args) -> int:

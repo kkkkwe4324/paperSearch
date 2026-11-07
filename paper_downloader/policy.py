@@ -16,7 +16,9 @@ def validate_range(minimum, maximum, name):
 
 def classify_failure(status, text):
     lowered = text.lower()
-    if status in (403, 429) or any(
+    if status == 403 or "access denied" in lowered:
+        return "access_denied"
+    if status == 429 or any(
         marker in lowered for marker in ("captcha", "unusual traffic", "rate limit")
     ):
         return "rate_limited"

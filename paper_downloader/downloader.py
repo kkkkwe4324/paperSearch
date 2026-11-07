@@ -4,6 +4,7 @@ import time
 from pathlib import Path
 
 from .files import is_valid_pdf
+from .open_access import fetch_open_pdf
 from .providers import normalize_doi, provider_for_doi
 from .providers_runtime import AuthRequiredError, download_pdf
 from .policy import RATE_LIMIT_COOLDOWNS, TRANSIENT_DELAYS, classify_failure
@@ -38,16 +39,25 @@ def should_skip(path: Path, *, resume: bool) -> bool:
 def download_batch(page, input_path: Path, output_dir: Path, state_path: Path, *, delay: float = 15.0, max_delay: float = 30.0, retry_count: int = 3, resume: bool = False, sleep=time.sleep, random_fn=random.uniform) -> dict[str, int]:
     output_dir.mkdir(parents=True, exist_ok=True)
     dois = read_dois(input_path)
-    counts = {"success": 0, "failed": 0, "skipped": 0, "auth_required": 0, "rate_limited": 0}
+    counts = {"success": 0, "failed": 0, "skipped": 0, "auth_required": 0, "rate_limited": 0, "access_denied": 0}
     for index, doi in enumerate(dois):
         target = output_path(output_dir, doi)
         if should_skip(target, resume=resume):
             counts["skipped"] += 1
             continue
-        if provider_for_doi(doi) not in {"ieee", "acm"}:
+        if provider_for_doi(doi) not in {"ieee", "acm", "sciencedirect"}:
             append_state(state_path, {"doi": doi, "status": "failed", "error": "Unsupported provider"})
             counts["failed"] += 1
             continue
+        if provider_for_doi(doi) == "sciencedirect":
+            try:
+                source = fetch_open_pdf(doi, target)
+            except Exception:
+                source = None
+            if source:
+                append_state(state_path, {"doi": doi, "status": "success", "bytes": target.stat().st_size, "source": source})
+                counts["success"] += 1
+                continue
         for attempt in range(1, retry_count + 1):
             try:
                 size = download_pdf(page, doi, target)
@@ -63,6 +73,10 @@ def download_batch(page, input_path: Path, output_dir: Path, state_path: Path, *
                 if category == "rate_limited":
                     append_state(state_path, {"doi": doi, "status": "rate_limited", "error": "provider rate limit"})
                     counts["rate_limited"] += 1
+                    return counts
+                if category == "access_denied":
+                    append_state(state_path, {"doi": doi, "status": "access_denied", "error": "provider returned HTTP 403"})
+                    counts["access_denied"] += 1
                     return counts
                 if attempt == retry_count:
                     append_state(state_path, {"doi": doi, "status": "failed", "error": "transient download failure"})

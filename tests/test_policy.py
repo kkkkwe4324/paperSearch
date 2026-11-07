@@ -30,7 +30,7 @@ def test_validate_range_rejects_invalid_bounds():
 @pytest.mark.parametrize(
     ("status", "text", "expected"),
     [
-        (403, "forbidden", "rate_limited"),
+        (403, "forbidden", "access_denied"),
         (429, "too many requests", "rate_limited"),
         (None, "CAPTCHA challenge", "rate_limited"),
         (None, "unusual traffic", "rate_limited"),

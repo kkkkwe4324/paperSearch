@@ -90,10 +90,11 @@ python -m paper_downloader search "PINN power system" --pages 5 --browser
 
 也支持 `https://doi.org/...` 和 `doi:10...` 形式。空行、注释行和重复 DOI 会被忽略。
 
-当前只支持：
+当前支持：
 
 - `10.1109/...` → IEEE Xplore；
 - `10.1145/...` → ACM Digital Library。
+- `10.1016/...`、`10.1006/...` → ScienceDirect。
 
 其他 DOI 不会被猜测或强行下载。
 
@@ -105,7 +106,7 @@ python -m paper_downloader search "PINN power system" --pages 5 --browser
 python -m paper_downloader login
 ```
 
-在浏览器中手动完成南科大 SSO/CARSI、验证码和 MFA，完成后回到终端按 Enter。profile 默认位置：
+浏览器会依次打开 IEEE、ACM 和 ScienceDirect；在每个页面手动完成南科大 SSO/CARSI、验证码和 MFA，完成后回到终端按 Enter。profile 默认位置：
 
 ```text
 %USERPROFILE%\.paper-downloader\browser-profile
@@ -124,17 +125,19 @@ python -m paper_downloader download papers.txt --output downloads `
 downloads/download-state.jsonl
 ```
 
+ScienceDirect 论文会先通过 `fulltext-article-downloader` 查找开放获取副本，再通过 OpenAlex 查找机构仓储副本。可设置自己的 `UNPAYWALL_EMAIL` 来启用 Unpaywall。开放副本找不到时，下载器会在已登录的浏览器中打开文章页提供的签名 PDF 链接，并用 Chrome CDP 捕获 PDF 响应。状态文件会记录成功来源；HTTP 403 记为 `access_denied`，HTTP 429 才记为 `rate_limited`。
+
 常用下载参数：
 
 | 参数 | 默认值 | 说明 |
 |---|---:|---|
-| `INPUT` | 必需 | DOI 文件 |
+| `INPUT` | 必需 | DOI 文件（IEEE、ACM 或 ScienceDirect） |
 | `--output` | `downloads` | PDF 目录 |
 | `--min-delay` / `--max-delay` | `15` / `30` | 每篇随机间隔范围（秒） |
 | `--retry-count` | `3` | 单篇最大重试次数 |
 | `--resume` | 关闭 | 跳过已有有效 PDF |
 
-如果登录会话失效，程序会记录 `auth_required` 并停止。重新执行 `login` 后，再运行同一下载命令即可。
+如果登录会话失效，程序会记录 `auth_required` 并停止。重新执行 `login` 后，再运行同一下载命令即可。ScienceDirect 会先把 DOI 解析为 PII，再从文章页读取签名 PDF 链接并通过同一浏览器会话下载。
 
 ## 下载后的筛选
 

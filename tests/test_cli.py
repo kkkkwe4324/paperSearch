@@ -1,6 +1,6 @@
 import pytest
 
-from paper_downloader.cli import build_parser, console_text, main, run_login, run_search
+from paper_downloader.cli import build_parser, console_text, main, run_download, run_login, run_search
 from paper_downloader.search import PaperResult, SearchBlockedError
 from pathlib import Path
 from paper_downloader.workspace import add_direction, add_idea, init_workspace
@@ -41,7 +41,7 @@ def test_main_rejects_unsafe_rate_settings_before_starting_browser(argv, monkeyp
     assert error.value.code == 2
 
 
-def test_login_opens_ieee_and_acm_for_separate_manual_confirmation(monkeypatch, tmp_path):
+def test_login_opens_publishers_for_separate_manual_confirmation(monkeypatch, tmp_path):
     visited = []
 
     class Page:
@@ -77,7 +77,45 @@ def test_login_opens_ieee_and_acm_for_separate_manual_confirmation(monkeypatch, 
     monkeypatch.setattr("builtins.input", lambda: "")
 
     assert run_login(tmp_path, cdp_port=9333) == 0
-    assert visited == ["https://ieeexplore.ieee.org", "https://dl.acm.org"]
+    assert visited == ["https://ieeexplore.ieee.org", "https://dl.acm.org", "https://www.sciencedirect.com"]
+
+
+def test_cdp_download_uses_a_new_page_to_preserve_verified_pdf_tabs(monkeypatch, tmp_path):
+    existing = object()
+    download_page = object()
+
+    class Context:
+        pages = [existing]
+
+        def new_page(self):
+            return download_page
+
+    class Browser:
+        contexts = [Context()]
+
+    class Chromium:
+        def connect_over_cdp(self, endpoint):
+            return Browser()
+
+    class Playwright:
+        chromium = Chromium()
+
+    class Manager:
+        def __enter__(self):
+            return Playwright()
+
+        def __exit__(self, *args):
+            return None
+
+    observed = []
+    monkeypatch.setattr("paper_downloader.cli._require_playwright", lambda: Manager)
+    monkeypatch.setattr("paper_downloader.cli.download_batch", lambda page, *args, **kwargs: observed.append(page) or {
+        "success": 0, "failed": 0, "skipped": 0, "auth_required": 0, "rate_limited": 0, "access_denied": 0
+    })
+    args = build_parser().parse_args(["download", "papers.txt", "--cdp", "--output", str(tmp_path)])
+
+    assert run_download(args) == 0
+    assert observed == [download_page]
 
 
 def test_search_parser_accepts_paging_options():
