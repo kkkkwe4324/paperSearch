@@ -13,3 +13,6 @@ paper-downloader = "paper_downloader.cli:main"
 
 [tool.setuptools.packages.find]
 include = ["paper_downloader*"]
+
+[tool.setuptools.package-data]
+paper_downloader = ["templates/*"]

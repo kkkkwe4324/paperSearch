@@ -2,6 +2,8 @@
 
 完整使用方法见 [USAGE.md](USAGE.md)。
 
+跨研究文件夹复用的目录、论文 MD 清单和 Zotero 分类流程见 [LLM_WORKFLOW.md](LLM_WORKFLOW.md) 与 [示例工作区](examples/research-workspace/README.md)。
+
 给自动化助手的固定操作流程见 [LLM_QUICKSTART.md](LLM_QUICKSTART.md)。
 
 命令行批量下载有权访问的 IEEE Xplore 和 ACM Digital Library PDF。首次手动完成一次南科大 SSO/CARSI 登录，之后复用本地浏览器 profile 下载多篇论文。

@@ -3,6 +3,7 @@ import pytest
 from paper_downloader.cli import build_parser, console_text, main, run_login, run_search
 from paper_downloader.search import PaperResult, SearchBlockedError
 from pathlib import Path
+from paper_downloader.workspace import add_direction, add_idea, init_workspace
 
 
 def test_download_parser_keeps_one_session_options():
@@ -139,3 +140,38 @@ def test_browser_mode_uses_real_chrome_cdp(monkeypatch, tmp_path):
 
     assert run_search(args) == 0
     assert calls == [("start", args.data_dir, args.cdp_port), ("search", args.cdp_port, False)]
+
+
+def test_workspace_commands_create_idea_and_direction(tmp_path):
+    assert main(["init", "--workspace", str(tmp_path)]) == 0
+    assert main(["add-idea", "idea_a", "--workspace", str(tmp_path)]) == 0
+    assert main(["add-direction", "latency", "--idea", "idea_a", "--workspace", str(tmp_path)]) == 0
+    assert (tmp_path / "ideas/idea_a/directions/latency/papers.md").exists()
+
+
+def test_search_routes_into_registered_direction(monkeypatch, tmp_path):
+    init_workspace(tmp_path)
+    add_idea(tmp_path, "idea_a")
+    add_direction(tmp_path, "idea_a", "latency")
+    monkeypatch.setattr("paper_downloader.cli.fetch_scholar_pages", lambda *args, **kwargs: [[PaperResult(title="Found")]])
+
+    assert main(["search", "example", "--pages", "1", "--workspace", str(tmp_path), "--idea", "idea_a", "--direction", "latency"]) == 0
+    assert len(list((tmp_path / "ideas/idea_a/directions/latency/search_logs/results").glob("*.jsonl"))) == 1
+
+
+def test_download_parser_respects_explicit_output_with_workspace(tmp_path):
+    init_workspace(tmp_path)
+    add_idea(tmp_path, "idea_a")
+    add_direction(tmp_path, "idea_a", "latency")
+    args = build_parser().parse_args(["download", "papers.txt", "--workspace", str(tmp_path), "--idea", "idea_a", "--direction", "latency", "--output", "custom"])
+    from paper_downloader.cli import route_workspace_args
+    route_workspace_args(args)
+    assert args.output == Path("custom")
+
+
+def test_search_rejects_unknown_direction_before_browser(tmp_path, monkeypatch):
+    init_workspace(tmp_path)
+    monkeypatch.setattr("paper_downloader.cli.run_search", lambda args: (_ for _ in ()).throw(AssertionError("browser started")))
+    with pytest.raises(SystemExit) as error:
+        main(["search", "example", "--workspace", str(tmp_path), "--idea", "idea_a", "--direction", "typo"])
+    assert error.value.code == 2

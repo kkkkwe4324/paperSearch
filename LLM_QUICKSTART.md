@@ -1,5 +1,7 @@
 # 给另一个 LLM 的快速配置协议
 
+研究资料整理请先读 [LLM_WORKFLOW.md](LLM_WORKFLOW.md)，其中给出独立工作区结构、按 idea／方向的 MD 清单、近三年 venue 规则和 Zotero 归档流程。
+
 ## 目标
 
 使用同一个本地 Chrome 会话完成 Scholar 检索和 IEEE/ACM 授权下载。只下载用户明确选择、且账号有权访问的论文。

@@ -1,0 +1,6 @@
+version = 1
+
+[screening]
+primary_years = 3
+recent_months = 12
+venue_policy = "literature/venue-policy.md"

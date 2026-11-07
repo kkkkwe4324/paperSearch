@@ -7,6 +7,7 @@ from .downloader import download_batch
 from .search import SearchBlockedError, cache_key, ensure_chrome_cdp, fetch_scholar_pages, fetch_scholar_pages_browser, fetch_scholar_pages_cdp, read_cached_results, write_results
 from .session import cdp_endpoint, open_context
 from .policy import validate_range
+from .workspace import add_direction, add_idea, discover_workspace, init_workspace, resolve_direction
 
 
 def console_text(value: str) -> str:
@@ -23,9 +24,24 @@ def build_parser() -> argparse.ArgumentParser:
     login.add_argument("--data-dir", type=Path, default=Path.home() / ".paper-downloader")
     login.add_argument("--cdp-port", type=int, default=9222)
 
+    init = sub.add_parser("init", help="Create a portable research workspace")
+    init.add_argument("--workspace", type=Path, required=True)
+
+    idea = sub.add_parser("add-idea", help="Add a research idea to a workspace")
+    idea.add_argument("name")
+    idea.add_argument("--workspace", type=Path, default=Path.cwd())
+
+    direction = sub.add_parser("add-direction", help="Add a direction beneath an idea")
+    direction.add_argument("name")
+    direction.add_argument("--idea", required=True)
+    direction.add_argument("--workspace", type=Path, default=Path.cwd())
+
     download = sub.add_parser("download", help="Download authorized IEEE/ACM PDFs")
     download.add_argument("input", type=Path)
-    download.add_argument("--output", type=Path, default=Path("downloads"))
+    download.add_argument("--output", type=Path)
+    download.add_argument("--workspace", type=Path)
+    download.add_argument("--idea")
+    download.add_argument("--direction")
     download.add_argument("--data-dir", type=Path, default=Path.home() / ".paper-downloader")
     download.add_argument("--delay", type=float, help=argparse.SUPPRESS)
     download.add_argument("--min-delay", type=float, default=15.0)
@@ -41,13 +57,41 @@ def build_parser() -> argparse.ArgumentParser:
     search.add_argument("--page-size", type=int, default=10)
     search.add_argument("--min-delay", type=float, default=20.0)
     search.add_argument("--max-delay", type=float, default=40.0)
-    search.add_argument("--results-dir", type=Path, default=Path("results"))
+    search.add_argument("--results-dir", type=Path)
+    search.add_argument("--workspace", type=Path)
+    search.add_argument("--idea")
+    search.add_argument("--direction")
     search.add_argument("--data-dir", type=Path, default=Path.home() / ".paper-downloader")
     search.add_argument("--refresh", action="store_true", help="Ignore the local cache")
     search.add_argument("--browser", action="store_true", help="Use a persistent visible Scholar browser")
     search.add_argument("--cdp", action="store_true", help="Attach to a manually started Chrome via CDP")
     search.add_argument("--cdp-port", type=int, default=9222)
     return parser
+
+
+def route_workspace_args(args, cwd: Path | None = None) -> None:
+    """Apply workspace defaults without overriding explicit output paths."""
+    cwd = Path.cwd() if cwd is None else Path(cwd)
+    root = args.workspace.resolve() if args.workspace else discover_workspace(cwd)
+    idea, direction = args.idea, args.direction
+    if root and not idea and not direction:
+        try:
+            parts = cwd.resolve().relative_to(root).parts
+            if len(parts) >= 4 and parts[0] == "ideas" and parts[2] == "directions":
+                idea, direction = parts[1], parts[3]
+        except ValueError:
+            pass
+    if bool(idea) != bool(direction):
+        raise ValueError("--idea and --direction must be provided together")
+    target = None
+    if idea:
+        if root is None:
+            raise ValueError("no .papersearch.toml found; pass --workspace or run init")
+        target = resolve_direction(root, idea, direction)
+    if args.command == "search":
+        args.results_dir = args.results_dir or (target / "search_logs" / "results" if target else Path("results"))
+    else:
+        args.output = args.output or (target / "incoming" if target else Path("downloads"))
 
 
 def _require_playwright():
@@ -79,6 +123,7 @@ def run_login(data_dir: Path, *, cdp_port: int = 9222) -> int:
 
 
 def run_download(args) -> int:
+    args.output = args.output or Path("downloads")
     sync_playwright = _require_playwright()
     with sync_playwright() as playwright:
         browser = None
@@ -107,6 +152,7 @@ def run_download(args) -> int:
 
 
 def run_search(args) -> int:
+    args.results_dir = args.results_dir or Path("results")
     stem = cache_key(args.query, args.pages, args.page_size)
     cached_path = args.results_dir / f"{stem}.jsonl"
     if cached_path.exists() and not args.refresh:
@@ -164,6 +210,8 @@ def main(argv=None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
     try:
+        if args.command in ("search", "download"):
+            route_workspace_args(args)
         if not 1 <= getattr(args, "cdp_port", 9222) <= 65535:
             raise ValueError("CDP port must be between 1 and 65535")
         if args.command == "search":
@@ -182,6 +230,21 @@ def main(argv=None) -> int:
                 raise ValueError("retry count must be between 1 and 3")
     except ValueError as exc:
         parser.error(str(exc))
+    if args.command == "init":
+        init_workspace(args.workspace)
+        return 0
+    if args.command == "add-idea":
+        try:
+            add_idea(args.workspace, args.name)
+        except ValueError as exc:
+            parser.error(str(exc))
+        return 0
+    if args.command == "add-direction":
+        try:
+            add_direction(args.workspace, args.idea, args.name)
+        except ValueError as exc:
+            parser.error(str(exc))
+        return 0
     if args.command == "login":
         return run_login(args.data_dir, cdp_port=args.cdp_port)
     if args.command == "search":

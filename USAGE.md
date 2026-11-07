@@ -1,5 +1,7 @@
 # Paper Downloader 使用说明
 
+独立研究工作区的初始化、idea／方向归档、论文 Markdown 列表、venue 筛选和 Zotero 分类见 [LLM_WORKFLOW.md](LLM_WORKFLOW.md)。
+
 面向第一次使用本工具的人或 LLM。完整流程是：
 
 ```text
