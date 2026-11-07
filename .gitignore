@@ -9,6 +9,7 @@ downloads/
 results/
 dist/
 build/
+.worktrees/
 release/
 *.pdf
 *.jsonl
