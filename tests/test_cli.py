@@ -175,3 +175,70 @@ def test_search_rejects_unknown_direction_before_browser(tmp_path, monkeypatch):
     with pytest.raises(SystemExit) as error:
         main(["search", "example", "--workspace", str(tmp_path), "--idea", "idea_a", "--direction", "typo"])
     assert error.value.code == 2
+
+
+def test_add_idea_discovers_workspace_from_nested_folder(tmp_path, monkeypatch):
+    init_workspace(tmp_path)
+    nested = tmp_path / "demos"
+    monkeypatch.chdir(nested)
+    assert main(["add-idea", "new_idea"]) == 0
+    assert (tmp_path / "ideas/new_idea/README.md").exists()
+
+
+def test_search_infers_direction_from_current_folder(tmp_path, monkeypatch):
+    init_workspace(tmp_path)
+    add_idea(tmp_path, "idea_a")
+    direction = add_direction(tmp_path, "idea_a", "latency")
+    monkeypatch.chdir(direction)
+    monkeypatch.setattr("paper_downloader.cli.fetch_scholar_pages", lambda *args, **kwargs: [[PaperResult(title="Found")]])
+    assert main(["search", "example", "--pages", "1"]) == 0
+    assert len(list((direction / "search_logs/results").glob("*.jsonl"))) == 1
+
+
+def test_workspace_search_requires_a_direction_at_workspace_root(tmp_path, monkeypatch):
+    init_workspace(tmp_path)
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr("paper_downloader.cli.run_search", lambda args: (_ for _ in ()).throw(AssertionError("browser started")))
+    with pytest.raises(SystemExit) as error:
+        main(["search", "example", "--pages", "1"])
+    assert error.value.code == 2
+
+
+def test_zotero_cli_plans_and_applies_existing_item(monkeypatch, tmp_path, capsys):
+    calls = []
+
+    class Client:
+        def collection_paths(self):
+            return {"ROOT1234": "10投机解码"}
+
+        def match_item(self, **kwargs):
+            calls.append(("match", kwargs))
+            return {"key": "PAPER123"}
+
+        def make_plan(self, key, collections, reason):
+            return {"schema": 1, "item_key": key, "add_collections": collections, "reason": reason}
+
+        def apply_plan(self, plan):
+            calls.append(("apply", plan))
+            return {"key": "PAPER123", "collections": ["ROOT1234"]}
+
+    monkeypatch.setattr("paper_downloader.cli.ZoteroClient", Client, raising=False)
+    plan = tmp_path / "route.json"
+    assert main(["zotero", "collections"]) == 0
+    assert "10投机解码" in capsys.readouterr().out
+    assert main(["zotero", "plan", "--doi", "10.1145/example.1", "--collection", "ROOT1234", "--reason", "direct method", "--output", str(plan)]) == 0
+    assert plan.exists()
+    assert main(["zotero", "apply", str(plan)]) == 0
+    assert calls[-1][0] == "apply"
+
+
+def test_zotero_plan_marks_missing_item_pending(monkeypatch, tmp_path, capsys):
+    class Client:
+        def match_item(self, **kwargs):
+            return None
+
+    monkeypatch.setattr("paper_downloader.cli.ZoteroClient", Client, raising=False)
+    plan = tmp_path / "route.json"
+    assert main(["zotero", "plan", "--doi", "10.1145/missing", "--collection", "ROOT1234", "--reason", "direct", "--output", str(plan)]) == 1
+    assert not plan.exists()
+    assert "pending Zotero import" in capsys.readouterr().out

@@ -1,4 +1,5 @@
 import argparse
+import json
 import random
 import sys
 from pathlib import Path
@@ -8,6 +9,7 @@ from .search import SearchBlockedError, cache_key, ensure_chrome_cdp, fetch_scho
 from .session import cdp_endpoint, open_context
 from .policy import validate_range
 from .workspace import add_direction, add_idea, discover_workspace, init_workspace, resolve_direction
+from .zotero import ZoteroClient, ZoteroError
 
 
 def console_text(value: str) -> str:
@@ -29,12 +31,24 @@ def build_parser() -> argparse.ArgumentParser:
 
     idea = sub.add_parser("add-idea", help="Add a research idea to a workspace")
     idea.add_argument("name")
-    idea.add_argument("--workspace", type=Path, default=Path.cwd())
+    idea.add_argument("--workspace", type=Path)
 
     direction = sub.add_parser("add-direction", help="Add a direction beneath an idea")
     direction.add_argument("name")
     direction.add_argument("--idea", required=True)
-    direction.add_argument("--workspace", type=Path, default=Path.cwd())
+    direction.add_argument("--workspace", type=Path)
+
+    zotero = sub.add_parser("zotero", help="Inspect and route existing Zotero papers")
+    zotero_sub = zotero.add_subparsers(dest="zotero_command", required=True)
+    zotero_sub.add_parser("collections", help="List the live Zotero topic tree")
+    plan = zotero_sub.add_parser("plan", help="Preview additive collection routing")
+    plan.add_argument("--doi")
+    plan.add_argument("--title")
+    plan.add_argument("--collection", action="append", required=True, dest="collections")
+    plan.add_argument("--reason", required=True)
+    plan.add_argument("--output", type=Path, required=True)
+    apply = zotero_sub.add_parser("apply", help="Apply a reviewed routing plan")
+    apply.add_argument("plan", type=Path)
 
     download = sub.add_parser("download", help="Download authorized IEEE/ACM PDFs")
     download.add_argument("input", type=Path)
@@ -83,6 +97,8 @@ def route_workspace_args(args, cwd: Path | None = None) -> None:
             pass
     if bool(idea) != bool(direction):
         raise ValueError("--idea and --direction must be provided together")
+    if root and not idea:
+        raise ValueError("a workspace search/download needs --idea and --direction, or run from a registered direction")
     target = None
     if idea:
         if root is None:
@@ -92,6 +108,34 @@ def route_workspace_args(args, cwd: Path | None = None) -> None:
         args.results_dir = args.results_dir or (target / "search_logs" / "results" if target else Path("results"))
     else:
         args.output = args.output or (target / "incoming" if target else Path("downloads"))
+
+
+def run_zotero(args) -> int:
+    client = ZoteroClient()
+    try:
+        if args.zotero_command == "collections":
+            for key, path in sorted(client.collection_paths().items(), key=lambda row: row[1].casefold()):
+                print(console_text(f"{key}  {path}"))
+            return 0
+        if args.zotero_command == "plan":
+            item = client.match_item(doi=args.doi, title=args.title)
+            if item is None:
+                print("pending Zotero import: no exact DOI/title match; verify metadata and import with Zotero first")
+                return 1
+            preview = client.make_plan(item["key"], args.collections, args.reason)
+            args.output.parent.mkdir(parents=True, exist_ok=True)
+            args.output.write_text(json.dumps(preview, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+            print(console_text(f"Routing preview: {args.output}"))
+            print(console_text(json.dumps(preview, ensure_ascii=False, indent=2)))
+            return 0
+        preview = json.loads(args.plan.read_text(encoding="utf-8"))
+        item = client.apply_plan(preview)
+        print(console_text(f"Confirmed Zotero item {item['key']} in collections: {', '.join(item.get('collections', []))}"))
+        print("Update the direction's papers.md with the confirmed key and collection paths.")
+        return 0
+    except (ZoteroError, ValueError, OSError, json.JSONDecodeError) as exc:
+        print(console_text(f"Zotero routing stopped: {exc}"), file=sys.stderr)
+        return 1
 
 
 def _require_playwright():
@@ -231,20 +275,25 @@ def main(argv=None) -> int:
     except ValueError as exc:
         parser.error(str(exc))
     if args.command == "init":
-        init_workspace(args.workspace)
+        try:
+            init_workspace(args.workspace)
+        except ValueError as exc:
+            parser.error(str(exc))
         return 0
     if args.command == "add-idea":
         try:
-            add_idea(args.workspace, args.name)
+            add_idea(args.workspace or discover_workspace(Path.cwd()) or Path.cwd(), args.name)
         except ValueError as exc:
             parser.error(str(exc))
         return 0
     if args.command == "add-direction":
         try:
-            add_direction(args.workspace, args.idea, args.name)
+            add_direction(args.workspace or discover_workspace(Path.cwd()) or Path.cwd(), args.idea, args.name)
         except ValueError as exc:
             parser.error(str(exc))
         return 0
+    if args.command == "zotero":
+        return run_zotero(args)
     if args.command == "login":
         return run_login(args.data_dir, cdp_port=args.cdp_port)
     if args.command == "search":

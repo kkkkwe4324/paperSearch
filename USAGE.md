@@ -2,6 +2,8 @@
 
 独立研究工作区的初始化、idea／方向归档、论文 Markdown 列表、venue 筛选和 Zotero 分类见 [LLM_WORKFLOW.md](LLM_WORKFLOW.md)。
 
+从本仓库运行 `python -m pip install -e .` 后，可在其他独立文件夹使用 `paper-downloader init --workspace <文件夹>`。完整的命令和示例见上述工作流；`paper-downloader zotero collections/plan/apply` 分别用于查看实时分类、生成预览和在 Zotero 授权后归档。`plan` 不会导入新书目，缺失条目先在 Zotero 中用识别号或 Connector 导入。
+
 面向第一次使用本工具的人或 LLM。完整流程是：
 
 ```text
